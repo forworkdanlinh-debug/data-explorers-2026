@@ -1,0 +1,22 @@
+TNBIKE DATABASE VALIDATION — KẾT QUẢ CHẠY THỰC TẾ
+Thời điểm: 2026-05-13 16:07:34
+=================================================================
+1.  email_log   SUCCESS=1129, NEEDS_REVIEW=3, FAILED=0  → ✅ PASS
+2.  stg_orders  1132 dòng / 1132 đơn                    → ✅ PASS
+3.  stg_lines   8723 dòng / SL=25607 / DT=40804047133   → ✅ PASS
+4.  sales_order 1132 đơn / SL=25607 / DT=40804047133    → ✅ PASS
+5.  order_line  8723 dòng / SL=25607 / DT=40804047133   → ✅ PASS
+6.  fact_sales  8723 dòng / 1132 đơn / SL=25607         → ✅ PASS
+7.  cus_review  NEEDS_REVIEW=2 cụm / 3 đơn (chờ KD)    → ✅ PASS
+8.  prd_review  MASTER_DATA_ENRICHMENT=18 mã / 81 dòng  → ✅ PASS
+9.  UNKNOWN     23 dòng = 3 đơn NEEDS_REVIEW (có file)  → ✅ PASS
+10. NULL meta   product/line/group = 0/0/0               → ✅ PASS
+=================================================================
+TỔNG KẾT: 10/10 PASS — Database sẵn sàng cho dashboard
+
+GHI CHÚ:
+- Check 7: NEEDS_REVIEW=2 là ĐÚNG — 2 MST chưa có trong master,
+  pipeline đã thử TAX_ID_EXACT + NAME_FUZZY, confidence < 90%,
+  đưa vào review queue. File PENDING đã tạo để chuyển bộ phận KD.
+- Check 9: 23 dòng UNKNOWN tương ứng 3 đơn NEEDS_REVIEW trên,
+  không phải lỗi pipeline. Sẽ được cập nhật sau khi KD xác nhận.

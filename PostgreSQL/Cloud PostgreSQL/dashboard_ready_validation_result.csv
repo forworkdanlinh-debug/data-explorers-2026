@@ -1,0 +1,8 @@
+check_name,actual,expected
+FAILED,0,0
+Đơn tháng 3,1132,1132
+Email xử lý,1132,1132
+Dòng hàng tháng 3,8723,8723
+Tổng doanh thu,40804047133,40804047133
+Tổng số lượng,25607,25607
+NEEDS_REVIEW customer,3,3

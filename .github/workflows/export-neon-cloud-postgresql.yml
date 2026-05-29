@@ -150,4 +150,5 @@ jobs:
           git config user.email "github-actions@github.com"
           git add "$CLOUD_DIR"
           git diff --cached --quiet || git commit -m "Export Neon Cloud PostgreSQL evidence"
+          git pull --rebase origin main
           git push

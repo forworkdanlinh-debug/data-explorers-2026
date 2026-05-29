@@ -1,6 +1,6 @@
 name: Export Neon Cloud PostgreSQL
 
-'on':
+on:
   workflow_dispatch:
   push:
     branches:
@@ -148,7 +148,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+          git pull --rebase origin main
           git add "$CLOUD_DIR"
           git diff --cached --quiet || git commit -m "Export Neon Cloud PostgreSQL evidence"
-          git pull --rebase origin main
-          git push
+          git push origin main

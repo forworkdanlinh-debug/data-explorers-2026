@@ -1,0 +1,147 @@
+name: Export Neon Cloud PostgreSQL
+
+'on':
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  export-neon:
+    runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      CLOUD_DIR: "PostgreSQL/Cloud PostgreSQL"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create Cloud PostgreSQL folder
+        run: |
+          mkdir -p "$CLOUD_DIR"
+
+      - name: Export Neon full dump
+        run: |
+          pg_dump "$DATABASE_URL" \
+            --schema=tnbike \
+            --no-owner \
+            --no-acl \
+            --clean \
+            --if-exists \
+            --file="$CLOUD_DIR/tnbike_neon_full_dump.sql"
+
+      - name: Export dashboard-ready view
+        run: |
+          psql "$DATABASE_URL" -c "\copy (
+            SELECT *
+            FROM tnbike.v_fact_sales_dashboard
+            WHERE order_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31'
+            ORDER BY so_number, fact_id
+          ) TO '$CLOUD_DIR/v_fact_sales_dashboard_march_2026.csv' WITH CSV HEADER"
+
+      - name: Export validation result
+        run: |
+          psql "$DATABASE_URL" -c "\copy (
+            SELECT 'Email xử lý' AS check_name, COUNT(*)::TEXT AS actual, '1132' AS expected
+            FROM tnbike.email_log
+            WHERE so_number LIKE 'BH26.%'
+
+            UNION ALL
+            SELECT 'Đơn tháng 3', COUNT(*)::TEXT, '1132'
+            FROM tnbike.sales_order
+            WHERE order_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31'
+
+            UNION ALL
+            SELECT 'Dòng hàng tháng 3', COUNT(*)::TEXT, '8723'
+            FROM tnbike.v_fact_sales_dashboard
+            WHERE order_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31'
+
+            UNION ALL
+            SELECT 'Tổng số lượng', SUM(quantity)::BIGINT::TEXT, '25607'
+            FROM tnbike.v_fact_sales_dashboard
+            WHERE order_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31'
+
+            UNION ALL
+            SELECT 'Tổng doanh thu', SUM(line_total)::BIGINT::TEXT, '40804047133'
+            FROM tnbike.v_fact_sales_dashboard
+            WHERE order_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31'
+
+            UNION ALL
+            SELECT 'FAILED', COUNT(*)::TEXT, '0'
+            FROM tnbike.email_log
+            WHERE so_number LIKE 'BH26.%'
+              AND processing_status = 'FAILED'
+
+            UNION ALL
+            SELECT 'NEEDS_REVIEW customer', COUNT(DISTINCT so_number)::TEXT, '3'
+            FROM tnbike.v_fact_sales_dashboard
+            WHERE order_date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31'
+              AND customer_mapping_status = 'NEEDS_REVIEW'
+          ) TO '$CLOUD_DIR/dashboard_ready_validation_result.csv' WITH CSV HEADER"
+
+      - name: Export customer review queue
+        run: |
+          psql "$DATABASE_URL" -c "\copy (
+            SELECT *
+            FROM tnbike.customer_mapping_review
+            ORDER BY order_count DESC, confidence DESC
+          ) TO '$CLOUD_DIR/customer_mapping_review_final.csv' WITH CSV HEADER"
+
+      - name: Export product review queue
+        run: |
+          psql "$DATABASE_URL" -c "\copy (
+            SELECT *
+            FROM tnbike.product_mapping_review
+            ORDER BY line_count DESC
+          ) TO '$CLOUD_DIR/product_mapping_review_final.csv' WITH CSV HEADER"
+
+      - name: Export product classification KPI
+        run: |
+          psql "$DATABASE_URL" -c "\copy (
+            SELECT
+              product_classification_status,
+              COUNT(*) AS rows,
+              COUNT(DISTINCT product_code) AS sku_count,
+              SUM(line_total) AS revenue,
+              ROUND(SUM(line_total) * 100.0 / NULLIF((
+                SELECT SUM(line_total)
+                FROM tnbike.v_fact_sales_dashboard
+                WHERE order_date BETWEEN DATE '2025-01-01' AND DATE '2026-03-31'
+              ), 0), 2) AS revenue_pct
+            FROM tnbike.v_fact_sales_dashboard
+            WHERE order_date BETWEEN DATE '2025-01-01' AND DATE '2026-03-31'
+            GROUP BY product_classification_status
+            ORDER BY revenue DESC
+          ) TO '$CLOUD_DIR/product_classification_kpi_full_period.csv' WITH CSV HEADER"
+
+      - name: Export geo enrichment KPI
+        run: |
+          psql "$DATABASE_URL" -c "\copy (
+            SELECT
+              geo_mapping_status,
+              COUNT(*) AS rows,
+              COUNT(DISTINCT so_number) AS orders,
+              SUM(line_total) AS revenue
+            FROM tnbike.v_fact_sales_dashboard
+            WHERE order_date BETWEEN DATE '2025-01-01' AND DATE '2026-03-31'
+            GROUP BY geo_mapping_status
+            ORDER BY revenue DESC
+          ) TO '$CLOUD_DIR/geo_enrichment_kpi_full_period.csv' WITH CSV HEADER"
+
+      - name: Commit exported Cloud PostgreSQL files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add "$CLOUD_DIR"
+          git diff --cached --quiet || git commit -m "Export Neon Cloud PostgreSQL evidence"
+          git push

@@ -1,3 +1,0 @@
-﻿review_id,raw_tax_id,raw_customer_name,raw_address,order_count,raw_phone,best_candidate_customer_code,best_candidate_customer_name,confidence,mapping_method,review_status,approved_customer_code,reviewed_at,reviewed_by
-163,298355399,CỬA HÀNG XE ĐẠP TRÍ ĐỨC,"đường Trường Chinh, Đồng Xuân, Phường Xuân Hòa, Tỉnh Phú Thọ",2,790572129,KH-00035,CỬA HÀNG XE ĐẠP TÂY BẮC,83.72,NEEDS_REVIEW,NEEDS_REVIEW,,,
-164,276926754,CỬA HÀNG XE ĐẠP SƠN HÀ,"D12b, D12c, Khu 4-Khu du lịch Bắc bán đảo Cam Ranh, Xã Cam Hải Đông, Huyện Cam Lâm, Tỉnh Khánh Hòa, Việt Nam",1,879802698,KH-00041,CỬA HÀNG XE ĐẠP ĐÔNG NAM,88.37,NEEDS_REVIEW,NEEDS_REVIEW,,,
